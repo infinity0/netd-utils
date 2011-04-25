@@ -1,0 +1,11 @@
+- preconditions util class
+
+- implement Executor, with clock
+  - executor handle error conditions
+  - executor handle auto-finish, auto-delete, etc
+
+- implement BlockAction, with timeout in getState()
+
+- implement a SingleParentAction (or hooks that do the same thing)
+  - have BlockAction and ActionSequence$1 extend it or contain it
+

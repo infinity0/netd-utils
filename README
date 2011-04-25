@@ -1,0 +1,9 @@
+## Building documentation
+
+$ mkdir lib && cd lib
+$ sudo aptitude install ant git-core
+$ git clone https://github.com/infinity0/proxy-doclet && cd proxy-doclet
+$ sudo aptitude install pandoc  # plus whatever else you need, like bliki-core
+$ ant
+$ cp dist/proxy-doclet+*.jar ../proxy-doclet.jar
+$ cd ../../ && ant doc

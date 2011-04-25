@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="netd-utils" default="all" basedir=".">
+	<description>
+	</description>
+
+	<property file="build.properties"/>
+	<property file="default.properties"/>
+
+	<!-- misc -->
+
+	<target name="dist" depends="clean-all, all" description="clean-build everything"/>
+	<target name="all" depends="package, doc" description="build everything, incl. docs"/>
+	<target name="clean-all" depends="clean, clean-doc" description="clean all build products, incl. docs"/>
+	<target name="debug">
+		<echoproperties/>
+	</target>
+
+	<!-- standard build -->
+
+	<target name="init">
+		<mkdir dir="${main.make}"/>
+		<mkdir dir="${main.dst}"/>
+		<mkdir dir="${test.make}"/>
+		<mkdir dir="${test.dst}"/>
+	</target>
+
+	<target name="compile" depends="init">
+		<tstamp/>
+		<javac srcdir="${main.src}" destdir="${main.make}"
+		  debug="on" debuglevel="${javac.debuglevel}" optimize="on">
+			<compilerarg line="${javac.args}"/>
+			<include name="**/*.java"/>
+			<exclude name="**/package-info.java"/>
+		</javac>
+	</target>
+
+	<target name="package" depends="compile">
+		<jar destfile="${main.dst}/${ant.project.name}.jar">
+			<fileset dir="${main.make}"/>
+		</jar>
+	</target>
+
+	<target name="clean" description="clean standard build products">
+		<delete dir="${main.make}"/>
+		<delete dir="${main.dst}"/>
+		<delete dir="${test.make}"/>
+		<delete dir="${test.dst}"/>
+	</target>
+
+	<!-- documentation -->
+
+	<target name="init-doc">
+		<mkdir dir="${doc.dst}"/>
+		<mkdir dir="${doc.api}"/>
+	</target>
+
+	<target name="doc" depends="javadoc"/>
+
+	<target name="javadoc" description="generate javadocs" depends="init-doc">
+		<javadoc destdir="${doc.api}" author="true" linksource="yes" version="true" use="true" private="true">
+			<doclet name="proxy.doclets.standard.Standard" path="lib/proxy-doclet.jar"/>
+			<arg value="-J-Dproxy.doclets.keeptabs=true"/>
+			<arg value="-J-Dproxy.adapters.markup=pandoc"/>
+			<arg value="-J-Dproxy.adapters.pandoc.cmdline=pandoc -p"/>
+			<arg line="-author -linksource -sourcetab 4"/>
+			<sourcepath path="${main.src}"/>
+			<!--<link href="http://java.sun.com/javase/6/docs/api"/>-->
+		</javadoc>
+	</target>
+
+	<target name="clean-doc" description="clean generated documentation">
+		<delete dir="${doc.dst}"/>
+		<delete dir="${doc.api}"/>
+	</target>
+
+</project>
