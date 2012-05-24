@@ -1,11 +1,42 @@
-- preconditions util class
+- link in google guava, probably
+- use maven instead of ant?
 
-- implement Executor, with clock
-  - executor handle error conditions
-  - executor handle auto-finish, auto-delete, etc
+design: write this up properly in README
 
-- implement BlockAction, with timeout in getState()
+- graph structure, plus operations on it
+	- each node in state INIT, PEND, DONE, ABORT
+		- addNode(): (null) -> INIT
+		- launch(): INIT->PEND
+		- finish(): PEND->DONE
+		- cancel(): PEND->ABORT
+		- all state transitions must be synchronous, i.e. not block, and ideally take a "short" amount of time
+	- methods on node[X] (i.e. changeState) need to single-lock X
+		- i.e. each node[X] needs a lock object
+	- methods on pair[X,Y] (i.e. add/del edge) need to triple-lock pair[X,Y] src(X,Y) dst(X,Y) in that order, where
+		- src(X,Y) means source of edge(X,Y) if that exists, else arbitrary (but different from dst)
+		- dst(X,Y) means target of edge(X,Y) if that exists, else arbitrary (but different from src)
+		- TODO explain down why this is safe, assuming no cycles
+		- i.e. each pair[X,Y] needs a lock object
+	- two modes
+		- dev mode: cycles detected on edge-creation
+			- forbids creation of edge and throws, i.e. prevents deadlock
+			- must lock ENTIRE GRAPH - EXPENSIVE!!! this is the only way to detect on edge-creation
+		- user mode: optional dedicated cycle-detection thread
+			- allows creation of edge with, i.e. allows deadlock, but can detect and warn user
 
-- implement a SingleParentAction (or hooks that do the same thing)
-  - have BlockAction and ActionSequence$1 extend it or contain it
 
+- explore how this relates to EventListeners
+	- the graph only represents existing tasks and their dependants, but not e.g. "run this dependant when event X fires"
+	- possibly, "event-firing system" is a separate issue from "graph-execution system"
+
+- explore how this relates to an ongoing "main loop"
+
+- document how one would actually use this library, with examples:
+	- single thread blocking during certain operations
+		sync1();
+		block();
+		sync2();
+		(use SequenceAction)
+	- call an external function that blocks
+		(use ExternalAction)
+	- etc etc etc?
