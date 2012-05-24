@@ -5,7 +5,7 @@ package netd.async.act;
 **
 ** Implementations may override {@link #delete()} to allow premature deletion.
 */
-abstract public class EternalAction extends Action {
+abstract class EternalAction extends BaseAction {
 
 	protected EternalAction() {
 		super();

@@ -22,8 +22,8 @@
 **
 ** @author infinity0 <infinity0@gmx.com>
 ** @see netd.async.act
-** @see netd.async.act.Act
-** @see netd.async.act.Action
+** @see netd.async.act.AbstractAction
+** @see netd.async.act.BaseAction
 ** @see netd.async.exec
 ** @see netd.async.exec.Executor
 ** @see netd.async.task

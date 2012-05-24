@@ -1,16 +1,17 @@
 package netd.async.task;
 
-import netd.async.act.Act;
+import netd.async.ActionControl;
 
 /**
 ** A task which relies on external code that does not use this library.
 */
 abstract public class ExternalTask extends AsyncTask {
 
-	Act block;
+	private ActionControl block;
 
+	@Override
 	public void launch() {
-		block = act.acquire();
+		block = act().acquire();
 		register();
 	}
 
@@ -39,11 +40,11 @@ abstract public class ExternalTask extends AsyncTask {
 	** {@link #launch()} blocks this task whilst the external API is doing its
 	** thing; this releases the block after the callback is executed.
 	*/
-	public void callback(Runnable run) {
+	protected void callback(Runnable run) {
 		try {
 			run.run();
 		} finally {
-			act.release(block);
+			act().release(block);
 		}
 	}
 

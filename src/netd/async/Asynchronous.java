@@ -12,9 +12,12 @@ import netd.async.annot.Nonblocking;
 public interface Asynchronous {
 
 	@Nonblocking
-	public void launch();
+	void launch();
 
 	@Nonblocking
-	public void finish();
+	void cancel();
 
+	@Nonblocking
+	void finish();
+	
 }

@@ -1,7 +1,7 @@
 package netd.async.task;
 
+import netd.async.ActionControl;
 import netd.async.Asynchronous;
-import netd.async.act.Act;
 
 /**
 ** The target of an action, an asynchronous task.
@@ -10,17 +10,25 @@ import netd.async.act.Act;
 */
 abstract public class AsyncTask implements Asynchronous {
 
-	protected Act act;
+	private ActionControl act;
 
-	final public synchronized void assign(Act act) {
+	final public synchronized void assign(ActionControl act) {
 		if (this.act != null) { throw new IllegalArgumentException("DOC"); }
 		this.act = act;
+	}
+	
+	protected ActionControl act() {
+		if (this.act != null) { throw new IllegalArgumentException("DOC"); }
+		return act;
 	}
 
 	@Override
 	abstract public void launch();
-
+	
+	@Override
+	abstract public void cancel();
+	
 	@Override
 	abstract public void finish();
-
+	
 }

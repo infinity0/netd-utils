@@ -1,12 +1,11 @@
 package netd.async.act;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import netd.async.Asynchronous;
 import netd.async.annot.Nonblocking;
-
 import netd.async.task.AsyncTask;
-
-import java.util.Set;
-import java.util.HashSet;
 
 /**
 ** An on-going action.
@@ -16,28 +15,19 @@ import java.util.HashSet;
 ** Execution {@link State state} is controlled via {@link #launch()},
 ** {@link #finish()}, {@link #delete()}.
 **
-** Relationships with other actions is controlled via {@link #attach(Action)},
-** {@link #detach(Action)}.
+** Relationships with other actions is controlled via {@link #attach(BaseAction)},
+** {@link #detach(BaseAction)}.
 **
 ** @see netd.async
 */
-public class Action extends Act implements Asynchronous {
-
-	public enum State {
-		/** State upon construction. */
-		INIT,
-		/** State after {@link #launch()} */
-		PEND,
-		/** State after {@link #finish()} */
-		DONE;
-	}
+public class BaseAction extends AbstractAction implements Asynchronous {
 
 	/** Sub-actions, that this action depends on.
 	 * Updated by the appropriate invocations on _this_ object. */
-	final protected Set<Action> sub = new HashSet<Action>();
+	final protected Set<BaseAction> sub = new HashSet<BaseAction>();
 	/** Super-actions, that depend on this action.
 	 * Updated by the appropriate invocations on the _parent_ action.*/
-	final protected Set<Action> sup = new HashSet<Action>();
+	final protected Set<BaseAction> sup = new HashSet<BaseAction>();
 
 	/** Task to be executed. If this is {@code null}, we instead use
 	 * {@link #launch2()}, {@link #finish2()} as appropriate. **/
@@ -45,11 +35,11 @@ public class Action extends Act implements Asynchronous {
 	/** Current state of the execution. */
 	protected State state = State.INIT;
 
-	Action() {
+	BaseAction() {
 		this.task = null;
 	}
 
-	Action(AsyncTask task) {
+	BaseAction(AsyncTask task) {
 		this.task = task;
 		task.assign(this);
 	}
@@ -72,7 +62,7 @@ public class Action extends Act implements Asynchronous {
 
 	/**
 	** Whether to allow {@link #finish()}. By default, only during {@link
-	** State#PEND}, **and** if we have no child dependants.
+	** State#PEND}, **and** if we have no child dependents.
 	*/
 	public synchronized boolean canFinish() {
 		return state == State.PEND && sub.isEmpty();
@@ -105,6 +95,11 @@ public class Action extends Act implements Asynchronous {
 		state = State.PEND;
 	}
 
+	@Override
+	public synchronized void cancel() throws IllegalStateException {
+		throw new UnsupportedOperationException("not implemented");
+	}
+
 	/**
 	** @see #canFinish()
 	** @see State#DONE
@@ -135,7 +130,7 @@ public class Action extends Act implements Asynchronous {
 		if (!canDelete()) { throw new IllegalStateException("DOC"); }
 		// TODO(infinity0): account for error conditions
 		deleteHookPre();
-		for (Action parent: sup.toArray(new Action[sup.size()])) {
+		for (BaseAction parent: sup.toArray(new BaseAction[sup.size()])) {
 			parent.detach(this);
 			//parent.delete(); executor handles this
 		}
@@ -165,29 +160,30 @@ public class Action extends Act implements Asynchronous {
 	///////////////////////////////////////////////////////////////////////////
 
 	/**
-	** Whether to allow {@link #attach(Action)}. By default, only during {@link
+	** Whether to allow {@link #attach(BaseAction)}. By default, only during {@link
 	** State#PEND}, **and** if the action is not a parent of this.
 	*/
-	public synchronized boolean canAttach(Action child) {
+	public synchronized boolean canAttach(BaseAction child) {
 		return state == State.PEND && !isDescendedFrom(child);
 	}
 
 	/**
-	** Whether to allow {@link #detach(Action)}. By default, only during {@link
+	** Whether to allow {@link #detach(BaseAction)}. By default, only during {@link
 	** State#PEND}, **and** if the action is a direct child of this.
 	*/
-	public synchronized boolean canDetach(Action child) {
+	public synchronized boolean canDetach(BaseAction child) {
 		return state == State.PEND && sub.contains(child);
 	}
 
 	/**
 	** Whether this is descended from the given action.
 	*/
-	protected boolean isDescendedFrom(Action action) {
-		// OPTIMISE
+	protected boolean isDescendedFrom(BaseAction action) {
+		// TODO OPTIMISE
 		// TODO possibly not thread safe
+		// FIXME definitely not thread safe over the entire graph
 		if (action == this) { return true; }
-		for (Action child: action.sub) {
+		for (BaseAction child: action.sub) {
 			if (isDescendedFrom(child)) { return true; }
 		}
 		return false;
@@ -196,12 +192,13 @@ public class Action extends Act implements Asynchronous {
 	/**
 	** Attach a child dependency, and attach this onto it as a dependant.
 	**
-	** @see #canAttach(Action)
+	** @see #canAttach(BaseAction)
 	*/
 	@Override
-	public synchronized void attach(Action child) throws IllegalStateException {
+	public synchronized void attach(BaseAction child) throws IllegalStateException {
+		// need to ensure DAG order (non-cyclic) before attempting lock on child
+		if (!canAttach(child)) { throw new IllegalArgumentException("DOC"); }
 		synchronized(child) {
-			if (!canAttach(child)) { throw new IllegalArgumentException("DOC"); }
 			child.attachHookPre(this);
 			boolean insert_child = child.sup.add(this);
 			boolean insert_parent = this.sup.add(child);
@@ -213,12 +210,13 @@ public class Action extends Act implements Asynchronous {
 	/**
 	** Detach a child dependency, and detach this from it as its dependant.
 	**
-	** @see #canDetach(Action)
+	** @see #canDetach(BaseAction)
 	*/
 	@Override
-	public synchronized void detach(Action child) throws IllegalStateException {
+	public synchronized void detach(BaseAction child) throws IllegalStateException {
+		// need to ensure DAG order (non-cyclic) before attempting lock on child
+		if (!canDetach(child)) { throw new IllegalArgumentException("DOC"); }
 		synchronized(child) {
-			if (!canDetach(child)) { throw new IllegalArgumentException("DOC"); }
 			child.detachHookPre(this);
 			boolean remove_child = child.sup.remove(this);
 			boolean remove_parent = this.sub.remove(child);
@@ -230,9 +228,9 @@ public class Action extends Act implements Asynchronous {
 	protected synchronized void deleteHookPre() {}
 	protected synchronized void deleteHookPost() {}
 
-	protected synchronized void detachHookPre(Action parent) {}
-	protected synchronized void detachHookPost(Action parent) {}
-	protected synchronized void attachHookPre(Action parent) {}
-	protected synchronized void attachHookPost(Action parent) {}
+	protected synchronized void detachHookPre(BaseAction parent) {}
+	protected synchronized void detachHookPost(BaseAction parent) {}
+	protected synchronized void attachHookPre(BaseAction parent) {}
+	protected synchronized void attachHookPost(BaseAction parent) {}
 
 }

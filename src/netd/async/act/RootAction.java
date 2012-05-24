@@ -3,7 +3,7 @@ package netd.async.act;
 /**
 ** A action at the root of an executor.
 */
-public class RootAction extends EternalAction {
+class RootAction extends EternalAction {
 
 	public RootAction() {
 		super();

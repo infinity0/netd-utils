@@ -11,7 +11,7 @@ package netd.async.act;
 **
 ** @see netd.async.task.ExternalTask
 */
-public class BlockAction extends EternalAction {
+class BlockAction extends EternalAction {
 
 	BlockAction() {
 		super();
@@ -25,12 +25,12 @@ public class BlockAction extends EternalAction {
 	///////////////////////////////////////////////////////////////////////////
 
 	@Override
-	public void attach(Action child) {
+	public void attach(BaseAction child) {
 		throw new IllegalStateException("cannot attach() on BlockAction");
 	}
 
 	@Override
-	public void detach(Action child) {
+	public void detach(BaseAction child) {
 		throw new IllegalStateException("cannot detach() on BlockAction");
 	}
 
